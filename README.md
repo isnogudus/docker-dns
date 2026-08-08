@@ -63,3 +63,27 @@ services:
 
 Mounting the socket read-only is sufficient; the program only calls `ping`
 and `containers/json`.
+
+## As a container with host networking (Linux only)
+
+```yaml
+services:
+  docker-dns:
+    build: .
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      ROOT_DOMAIN: xxx.yy
+      # LISTEN_ADDR: 192.168.1.10:53   # optional: bind to a single host IP,
+                                       # e.g. when systemd-resolved occupies 127.0.0.53:53
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+With host networking the server binds port 53 directly on the host, so there
+is no `ports:` section (`-p` is ignored in this mode). `FALLBACK_DNS` is
+omitted because Docker's embedded DNS (`127.0.0.11`) only exists inside
+bridge-network namespaces — resolution runs purely via the Docker socket.
+Note that the returned addresses are bridge-network IPs (e.g. `172.18.x.x`):
+reachable from the host itself, but LAN clients need a route to the Docker
+host to reach them.
