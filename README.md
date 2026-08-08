@@ -87,3 +87,25 @@ bridge-network namespaces — resolution runs purely via the Docker socket.
 Note that the returned addresses are bridge-network IPs (e.g. `172.18.x.x`):
 reachable from the host itself, but LAN clients need a route to the Docker
 host to reach them.
+
+## Delegating the zone from unbound
+
+docker-dns only answers its own zone (everything else is REFUSED), so it is
+not a general-purpose resolver. The clean setup is to keep a recursive
+resolver like unbound as the LAN DNS and delegate just the container zone.
+Run docker-dns on a separate port, e.g. `LISTEN_ADDR=127.0.0.1:5353`, and add
+to `unbound.conf`:
+
+```
+server:
+    do-not-query-localhost: no
+    local-zone: "xxx.yy." nodefault
+
+forward-zone:
+    name: "xxx.yy."
+    forward-addr: 127.0.0.1@5353
+```
+
+unbound keeps serving everything else (recursion, caching, DNSSEC); only
+`*.xxx.yy` is forwarded to docker-dns. If docker-dns is down, the LAN only
+loses the container zone, not general name resolution.
