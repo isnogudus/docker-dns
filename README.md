@@ -19,6 +19,41 @@ record.
 Queries outside the root domain are answered with REFUSED, unknown names
 inside the zone with NXDOMAIN.
 
+## SRV records (port discovery)
+
+Reverse proxies like Caddy or Ferron can discover upstream *ports* via SRV.
+docker-dns answers SRV queries of the form `_<service>._<proto>.<name>.<root>`
+with target `<name>.<root>` and the container's port; the target's A/AAAA
+records are included as glue in the additional section:
+
+```
+$ dig _http._tcp.weft.xxx.yy SRV
+_http._tcp.weft.xxx.yy.  30  IN  SRV  0 0 8080 weft.xxx.yy.
+weft.xxx.yy.             30  IN  A    172.20.0.5
+```
+
+The port is chosen, in this order:
+
+1. Container label `docker-dns.srv.<service>` (e.g. `docker-dns.srv.http=8080`)
+2. Container label `docker-dns.port` (default port for any service)
+3. The well-known port of `<service>` (http→80, https→443, ldap→389, …) if
+   the container exposes it
+4. The lowest exposed port (`EXPOSE` / `--expose` / `-p`) of the requested
+   protocol (`_tcp` / `_udp`)
+
+If none applies, the answer is empty (NODATA). Set a label when a container
+exposes several ports and the guess would be wrong. SRV needs the Docker
+socket; the `FALLBACK_DNS` path knows no ports.
+
+Caddy example, using docker-dns via the system resolver (see the unbound
+section below):
+
+```
+reverse_proxy {
+    dynamic srv _http._tcp.weft.xxx.yy
+}
+```
+
 ## Configuration (environment)
 
 | Variable            | Required | Default      | Meaning                                                            |
