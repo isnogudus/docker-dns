@@ -45,6 +45,27 @@ If none applies, the answer is empty (NODATA). Set a label when a container
 exposes several ports and the guess would be wrong. SRV needs the Docker
 socket; the `FALLBACK_DNS` path knows no ports.
 
+**Pitfall — `EXPOSE` is cumulative across image layers.** If your Dockerfile
+says `EXPOSE 8080` but the base image already had `EXPOSE 80` (typical for
+`php:apache`, nginx, …), the container exposes both, and rule 3 picks the
+well-known port 80 for `_http` — where nothing is listening. Check with
+
+```bash
+docker inspect --format '{{json .Config.ExposedPorts}}' <container>
+```
+
+and, if several ports show up, pin the right one with a label:
+
+```yaml
+services:
+  dokuwiki:
+    labels:
+      docker-dns.srv.http: "8080"   # or docker-dns.port: "8080" for all services
+```
+
+Labels beat every heuristic and take effect within `DOCKER_CACHE_SECS` after
+the container is recreated.
+
 Caddy example, using docker-dns via the system resolver (see the unbound
 section below):
 
