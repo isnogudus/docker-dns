@@ -84,7 +84,7 @@ dig -p 5353 @127.0.0.1 weft.xxx.yy A
 ```yaml
 services:
   docker-dns:
-    build: .
+    image: docker-dns   # built with: docker build -t docker-dns .
     restart: unless-stopped
     environment:
       ROOT_DOMAIN: xxx.yy
@@ -104,7 +104,7 @@ and `containers/json`.
 ```yaml
 services:
   docker-dns:
-    build: .
+    image: docker-dns   # built with: docker build -t docker-dns .
     restart: unless-stopped
     network_mode: host
     environment:
